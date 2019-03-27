@@ -292,8 +292,6 @@ function randomFromAddress(address entropy) private view returns (uint8) {
                 "Incorrect fee amount");
             }
 
-            // Check That Market Cap is not full
-            if ()
 
             address seller = msg.sender;
             uint auctionStartedTime = now;
