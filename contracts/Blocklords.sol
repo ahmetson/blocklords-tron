@@ -369,7 +369,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     }
 
     uint cofferBlockNumber = block.number;
-    uint CofferBlockDistance = 150000;
+    uint CofferBlockDistance = 1;//150000;
 
     function dropCoffer() public {   // drop coffer (every 25 000 blocks) ==> 30% coffer goes to cityOwner
         require(block.number-cofferBlockNumber > CofferBlockDistance,
@@ -541,7 +541,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     }
 
     uint blockNumber = block.number;
-    uint blockDistance = 800;
+    uint blockDistance = 1; // 800 in original
 
     mapping(uint => DropData) public stronghold_reward_logs;
 
