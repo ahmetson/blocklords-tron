@@ -357,7 +357,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
     mapping(uint => City[16]) public idToCity;
 
-    function putCity(uint id, uint size, uint cofferSize, uint cap) public onlyOwner {
+    function putCity(uint id, uint size, uint cofferSize, uint cap) public payable onlyOwner {
         require(msg.value == cofferSize,
                 "msg.value does not match cofferSize");
         uint blank = 0;
