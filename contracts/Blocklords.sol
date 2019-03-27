@@ -280,6 +280,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
             require(items[itemId].OWNER == msg.sender, "You don't own this item");
             require(auctionDuration == duration8Hours || auctionDuration == duration12Hours || auctionDuration == duration24Hours,
             "Incorrect auction duration");
+            require(cities[city-1].MarketCap > cities[city-1].MarketAmount, "City Market Is Full");
             if (auctionDuration == duration8Hours){
                 require(msg.value == fee8Hours,
                 "Incorrect fee amount");
@@ -290,9 +291,13 @@ function randomFromAddress(address entropy) private view returns (uint8) {
                 require(msg.value == fee24Hours,
                 "Incorrect fee amount");
             }
+
+            // Check That Market Cap is not full
+            if ()
+
             address seller = msg.sender;
             uint auctionStartedTime = now;
-            market_items_data[itemId] = MarketItemData(price, auctionDuration, auctionStartedTime, city - 1, seller);
+            market_items_data[itemId] = MarketItemData(price, auctionDuration, auctionStartedTime, city, seller);
         }
 //
     function getMarketItem(uint itemId) public view returns(uint, uint, uint, uint, address){
@@ -313,6 +318,8 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
         uint amount = msg.value;
 
+        cities[market_items_data[itemId]-1].MarketAmount = cities[market_items_data[itemId]-1].MarketAmount - 1;
+
         if (cityOwner > 0)
           cityOwner.transfer(amount / 110 * 5); // send 5% to city owner
         seller.transfer(amount / 110 * 100); // send 90% to seller
@@ -326,6 +333,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     function deleteMarketItem(uint itemId) public returns(bool){
         require(market_items_data[itemId].Seller == msg.sender,
                 "You do not own this item");
+        cities[market_items_data[itemId]-1].MarketAmount = cities[market_items_data[itemId]-1].MarketAmount - 1;
         delete market_items_data[itemId];
         return true;
     }
@@ -342,21 +350,23 @@ function randomFromAddress(address entropy) private view returns (uint8) {
         uint Size; // BIG, MEDIUM, SMALL
         uint CofferSize; // size of the city coffer
         uint CreatedBlock;
+        uint MarketCap;
+        uint MarketAmount;
     }
 
     City[16] public cities;
 
     mapping(uint => City[16]) public idToCity;
 
-    function putCity(uint id, uint size, uint cofferSize) public payable onlyOwner {
+    function putCity(uint id, uint size, uint cofferSize, uint cap) public onlyOwner {
         require(msg.value == cofferSize,
                 "msg.value does not match cofferSize");
-        uint blankHero = 0;
-        cities[id-1] = City(id, blankHero, size, cofferSize, 0);
+        uint blank = 0;
+        cities[id-1] = City(id, blank, size, cofferSize, block.number, cap, blank );
     }
 
-    function getCityData(uint id) public view returns(uint, uint, uint){
-        return (cities[id-1].Hero, cities[id-1].Size, cities[id-1].CofferSize);
+    function getCityData(uint id) public view returns(uint, uint, uint, uint, uint, uint){
+        return (cities[id-1].Hero, cities[id-1].Size, cities[id-1].CofferSize, cities[id-1].CreatedBlock, cities[id-1].MarketCap, cities[id-1].MarketAmount);
 
     }
 
