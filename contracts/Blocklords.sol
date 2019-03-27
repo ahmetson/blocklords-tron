@@ -11,20 +11,20 @@ uint duration8Hours = 28800;      // 28_800 Seconds are 8 hours
 uint duration12Hours = 43200;     // 43_200 Seconds are 12 hours
 uint duration24Hours = 86400;     // 86_400 Seconds are 24 hours
 
-uint createHeroFee = 888000000; //TRX in SUN, 1 TRX * 1000000
-                      //000000
+uint createHeroFee = 500000000; //TRX in SUN, 1 TRX * 1000000
+                   //___000000
 uint fee8Hours =   50000000;
-                   //000000
+                 //__000000
 uint fee12Hours =  88000000;
-                   //000000
+                 //__000000
 uint fee24Hours = 100000000;
-                   //000000
-uint siegeBattleFee = 333000000;
+                //___000000
+uint siegeBattleFee = 200000000;
                        //000000
-uint banditBattleFee = 100000000;
-                        //000000
-uint strongholdBattleFee = 200000000;
-                            //000000
+uint banditBattleFee = 500000000;
+                     //__000000
+uint strongholdBattleFee = 100000000;
+                         //___000000
 
 uint ATTACKER_WON = 1;
 uint ATTACKER_LOSE = 2;
