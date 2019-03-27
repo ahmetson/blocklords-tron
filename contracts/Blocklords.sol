@@ -316,7 +316,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
         uint amount = msg.value;
 
-        cities[market_items_data[itemId]-1].MarketAmount = cities[market_items_data[itemId]-1].MarketAmount - 1;
+        cities[market_items_data[itemId].City-1].MarketAmount = cities[market_items_data[itemId].City-1].MarketAmount - 1;
 
         if (cityOwner > 0)
           cityOwner.transfer(amount / 110 * 5); // send 5% to city owner
