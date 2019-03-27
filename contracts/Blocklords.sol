@@ -292,6 +292,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
                 "Incorrect fee amount");
             }
 
+            cities[market_items_data[itemId].City-1.].MarketAmount = cities[market_items_data[itemId].City-1].MarketAmount + 1;
 
             address seller = msg.sender;
             uint auctionStartedTime = now;
@@ -331,7 +332,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     function deleteMarketItem(uint itemId) public returns(bool){
         require(market_items_data[itemId].Seller == msg.sender,
                 "You do not own this item");
-        cities[market_items_data[itemId]-1].MarketAmount = cities[market_items_data[itemId]-1].MarketAmount - 1;
+        cities[market_items_data[itemId].City-1.].MarketAmount = cities[market_items_data[itemId].City-1].MarketAmount - 1;
         delete market_items_data[itemId];
         return true;
     }
