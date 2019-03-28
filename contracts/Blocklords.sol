@@ -43,10 +43,9 @@ function getBalance() public view returns(uint) {
 }
 
 function withdraw(uint amount) public returns(bool) { //  withdraw  only to owner's address
-    // if (amount == 0)
-    //     amount = getBalance();
-    // require(amount < address(this).balance-coffersTotal,
-    // "balance is insufficient");  // Umcomment this requirement if you want the amount stored in coffers to be not withdrawable
+    if (amount == 0)
+         amount = getBalance();
+    require(amount < address(this).balance-coffersTotal, "balance is insufficient");  // Umcomment this requirement if you want the amount stored in coffers to be not withdrawable
     address owner_ = owner();
     owner_.transfer(amount);
     return true;
