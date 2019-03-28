@@ -766,6 +766,8 @@ function randomFromAddress(address entropy) private view returns (uint8) {
       //uint seed = block.number + item.GENERATION+item.LEVEL+item.STAT_VALUE+item.XP + itemIds.length + randomFromAddress(item.OWNER); // my poor attempt to make the random generation a little bit more random
 
       if (occupiedIndexesAmount == zero) {
+          delete stronghold_rewards[itemId];
+          delete items[itemId];
           return "All strongholds are occupied by NPC";
       }
       uint seed = block.number + randomFromAddress(msg.sender) + getBalance();
