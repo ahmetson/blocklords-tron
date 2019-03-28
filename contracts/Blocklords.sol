@@ -338,7 +338,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     function deleteMarketItem(uint itemId) public returns(bool){
         require(market_items_data[itemId].Seller == msg.sender,
                 "You do not own this item");
-        cities[market_items_data[itemId].City-1.].MarketAmount = cities[market_items_data[itemId].City-1].MarketAmount - 1;
+        cities[market_items_data[itemId].City-1].MarketAmount = cities[market_items_data[itemId].City-1].MarketAmount - 1;
         delete market_items_data[itemId];
         return true;
     }
@@ -565,33 +565,33 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     }
 
     /*
-    Stronghold Timer
+      Stronghold Timer
 
-    StrongholdTimer global variable
+      StrongholdTimer global variable
 
-    When Putting Stronghold:
-    Check if global variable is 0
+      When Putting Stronghold:
+      Check if global variable is 0
 
     */
 
     /* function minimize(uint number) internal pure returns (uint) {
-      if (number >= 100000000)
-    return number / 100000000;
-      if (number >= 10000000)
-    return number / 10000000;
-      if (number >= 1000000)
-    return number / 1000000;
-      if (number >= 100000)
-    return number / 100000;
-      if (number >= 10000)
-    return number / 10000;
-      if (number >= 1000)
-    return number / 1000;
-      if (number >= 100)
-    return number / 100;
-      if (number >= 10)
-    return number / 10;
-      return  number;
+        if (number >= 100000000)
+      return number / 100000000;
+        if (number >= 10000000)
+      return number / 10000000;
+        if (number >= 1000000)
+      return number / 1000000;
+        if (number >= 100000)
+      return number / 100000;
+        if (number >= 10000)
+      return number / 10000;
+        if (number >= 1000)
+      return number / 1000;
+        if (number >= 100)
+      return number / 100;
+        if (number >= 10)
+      return number / 10;
+        return  number;
     } */
 
     /* function complexDropItems(uint itemId) internal returns(string) {
