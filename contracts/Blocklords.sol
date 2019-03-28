@@ -21,7 +21,7 @@ uint fee24Hours = 100000000;
                 //___000000
 uint siegeBattleFee = 200000000;
                        //000000
-uint banditBattleFee = 500000000;
+uint banditBattleFee = 50000000;
                      //__000000
 uint strongholdBattleFee = 100000000;
                          //___000000
