@@ -279,7 +279,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
             require(items[itemId].OWNER == msg.sender, "You don't own this item");
             require(auctionDuration == duration8Hours || auctionDuration == duration12Hours || auctionDuration == duration24Hours,
             "Incorrect auction duration");
-            require(cities[city-1].MarketCap > cities[city-1].MarketAmount, "City Market Is Full");
+            require(cities[city-1].MarketCap > cities[city-1].MarketAmount, "City Market Is Full"); // Also Checks that city exists
             if (auctionDuration == duration8Hours){
                 require(msg.value == fee8Hours,
                 "Incorrect fee amount");
@@ -302,10 +302,13 @@ function randomFromAddress(address entropy) private view returns (uint8) {
             return(market_items_data[itemId].Price, market_items_data[itemId].AuctionDuration, market_items_data[itemId].AuctionStartedTime, market_items_data[itemId].City, market_items_data[itemId].Seller);
     }
 
+    uint requiredTransfer = 115;
+    uint lordFee = 10;
+
     function buyMarketItem(uint itemId) public payable returns(bool) {
         require(market_items_data[itemId].AuctionStartedTime+market_items_data[itemId].AuctionDuration>=now,
         "Auction is no longer available"); // check  auction duration time
-        require(msg.value == (market_items_data[itemId].Price / 100 * 110),
+        require(msg.value == (market_items_data[itemId].Price / 100 * requiredTransfer),
         "The value sent is incorrect"); // check transaction amount
 
         uint city = market_items_data[itemId].City; // get the city id
@@ -319,8 +322,8 @@ function randomFromAddress(address entropy) private view returns (uint8) {
         cities[market_items_data[itemId].City-1].MarketAmount = cities[market_items_data[itemId].City-1].MarketAmount - 1;
 
         if (cityOwner > 0)
-          cityOwner.transfer(amount / 110 * 5); // send 5% to city owner
-        seller.transfer(amount / 110 * 100); // send 90% to seller
+          cityOwner.transfer(amount / requiredTransfer * lordFee); // send 10% to city owner
+        seller.transfer(amount / requiredTransfer * 100); // send 100% to seller
 
         items[itemId].OWNER = msg.sender; // change owner
         delete market_items_data[itemId]; // delete auction
