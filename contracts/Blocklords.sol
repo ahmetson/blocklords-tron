@@ -393,9 +393,9 @@ function randomFromAddress(address entropy) private view returns (uint8) {
             uint cityHero = cities[cityNumber].Hero;
             address heroOwner = heroes[cityHero].OWNER;
             uint transferValue = (cities[cityNumber].CofferSize/100)*30;
-            cities[cityNumber].CofferSize = (cities[cityNumber].CofferSize/100)*70;
 
             if (cityHero > 0){
+                cities[cityNumber].CofferSize = (cities[cityNumber].CofferSize/100)*70;
                 heroOwner.transfer(transferValue);
             } // else it is goes to nowhere, which means will stay on contract and will be transferred NPC owner.
         }
