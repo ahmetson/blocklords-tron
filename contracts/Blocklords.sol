@@ -768,7 +768,10 @@ function randomFromAddress(address entropy) private view returns (uint8) {
       }
 
       //uint seed = block.number + item.GENERATION+item.LEVEL+item.STAT_VALUE+item.XP + itemIds.length + randomFromAddress(item.OWNER); // my poor attempt to make the random generation a little bit more random
-
+      // Update Block
+      uint previousBlock = blockNumber;
+      blockNumber = block.number; // this function can be called every "blockDistance" blocks
+      
       if (occupiedIndexesAmount == zero) {
           delete stronghold_rewards[itemId];
           delete items[itemId];
@@ -785,10 +788,6 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
       delete stronghold_rewards[itemId]; //delete item from strongHold reward struct
       delete strongholds[index];
-
-      // Update Block
-      uint previousBlock = blockNumber;
-      blockNumber = block.number; // this function can be called every "blockDistance" blocks
 
       stronghold_reward_logs[blockNumber] = DropData(blockNumber, index + 1, itemId, lordId, previousBlock); //add data to the struct
 
