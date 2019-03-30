@@ -11,7 +11,8 @@ uint duration8Hours = 28800;      // 28_800 Seconds are 8 hours
 uint duration12Hours = 43200;     // 43_200 Seconds are 12 hours
 uint duration24Hours = 86400;     // 86_400 Seconds are 24 hours
 
-uint createHeroFee = 888000000; //TRX in SUN, 1 TRX * 1000000
+uint createHeroFee = 500000000; //TRX in SUN, 1 TRX * 1000000
+uint referalReward = 250000000;
                       //000000
 uint fee8Hours =   50000000;
                    //000000
@@ -100,6 +101,8 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
     mapping (uint => Hero) heroes;
 
+    event HeroCreation(address creator, uint id);
+
     function putHero(uint id, uint troopsCap, uint leadership,  uint intelligence, uint strength, uint speed, uint defense, uint item1, uint item2, uint item3, uint item4, uint item5) public payable returns(bool){
             require(msg.value == createHeroFee, "Payment fee does not match");
             require(id > 0,
@@ -109,11 +112,11 @@ function randomFromAddress(address entropy) private view returns (uint8) {
             "Hero with this id already exists");
 
             // TODO check item is not for stronghold reward
-             require(items[item1].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
-             require(items[item2].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
-             require(items[item3].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
-             require(items[item4].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
-             require(items[item5].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
+            require(items[item1].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
+            require(items[item2].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
+            require(items[item3].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
+            require(items[item4].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
+            require(items[item5].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
 
             //delete payments[id]; // delete payment hash after the hero was created in order to prevent double spend
             heroes[id] = Hero(msg.sender, troopsCap, leadership,  intelligence, strength, speed, defense);
@@ -124,9 +127,49 @@ function randomFromAddress(address entropy) private view returns (uint8) {
             items[item4].OWNER = msg.sender;
             items[item5].OWNER = msg.sender;
 
+            emit HeroCreation(msg.sender, id);
+            return true;
+    }
+    event ReferalLink(address referer, uint id, address refered);
+
+    function putHeroReferal(uint referer_id, address referer_address, uint id, uint[6] heroStats, uint[5] hero_items) public payable returns(bool){
+
+            require(id > 0,
+            "Please insert id higher than 0");
+
+            require(referer_id > 0,
+            "Please insert referer_id higher than 0");
+            //require(payments[id].PAYER == owner, "Payer and owner do not match");
+            require(heroes[id].OWNER == 0x0000000000000000000000000000000000000000,
+            "Hero with this id already exists");
+
+            require(heroes[referer_id].OWNER == referer_address,
+            "The referer is not in the game");
+
+            require(msg.value == createHeroFee, "Payment fee does not match");
+            require(referer_address.send(referalReward), "Could not send referal reward");
+
+            emit ReferalLink(referer_address, referer_id, msg.sender);
+            // TODO check item is not for stronghold reward
+            require(items[hero_items[0]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(items[hero_items[1]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(items[hero_items[2]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(items[hero_items[3]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(items[hero_items[4]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+
+            //delete payments[id]; // delete payment hash after the hero was created in order to prevent double spend
+            heroes[id] = Hero(msg.sender, heroStats[0], heroStats[1],  heroStats[2], heroStats[3], heroStats[4], heroStats[5]);
+
+            items[hero_items[0]].OWNER = msg.sender;
+            items[hero_items[1]].OWNER = msg.sender;
+            items[hero_items[2]].OWNER = msg.sender;
+            items[hero_items[3]].OWNER = msg.sender;
+            items[hero_items[4]].OWNER = msg.sender;
+
 
             return true;
     }
+
 
     function getHero(uint id) public view returns(address, uint, uint, uint, uint, uint, uint){
             return (heroes[id].OWNER, heroes[id].TROOPS_CAP, heroes[id].LEADERSHIP, heroes[id].INTELLIGENCE, heroes[id].STRENGTH, heroes[id].SPEED, heroes[id].DEFENSE);
