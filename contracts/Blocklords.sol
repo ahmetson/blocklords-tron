@@ -399,15 +399,15 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
         cofferBlockNumber = block.number; // this function can be called every "cofferBlockNumber" blocks
 
-        for (uint cityNumber=0; cityNumber < cities.length ; cityNumber++){ // loop through each city
+        for (uint cityNumber=0; cityNumber < citiesCount ; cityNumber++){ // loop through each city
 
             uint cityHero = cities[cityNumber].Hero;
-            address heroOwner = heroes[cityHero].OWNER;
-            uint transferValue = (cities[cityNumber].CofferSize/100)*30;
 
             if (cityHero > 0){
-                cities[cityNumber].CofferSize = (cities[cityNumber].CofferSize/100)*70;
-                heroOwner.transfer(transferValue);
+              address heroOwner = heroes[cityHero].OWNER;
+              uint transferValue = (cities[cityNumber].CofferSize/100)*30;
+              cities[cityNumber].CofferSize = (cities[cityNumber].CofferSize/100)*70;
+              heroOwner.transfer(transferValue);
             } // else it is goes to nowhere, which means will stay on contract and will be transferred NPC owner.
         }
     }
