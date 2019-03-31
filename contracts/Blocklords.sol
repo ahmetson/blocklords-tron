@@ -778,7 +778,41 @@ function randomFromAddress(address entropy) private view returns (uint8) {
       return ("Failed to reward stronghold lord");
     } */
 
-    function simpleDropItems(uint itemId) internal returns (string) {
+    function straightDropItems(uint itemId) internal returns (string) {
+      uint zero = 0;
+
+      //uint seed = block.number + item.GENERATION+item.LEVEL+item.STAT_VALUE+item.XP + itemIds.length + randomFromAddress(item.OWNER); // my poor attempt to make the random generation a little bit more random
+      // Update Block
+      uint previousBlock = blockNumber;
+      blockNumber = block.number; // this function can be called every "blockDistance" blocks
+
+      uint seed = block.number + randomFromAddress(msg.sender) + getBalance();
+
+      uint index = random(seed, strongholdCount) - 1;
+
+      uint lordId = strongholds[index].Hero;
+
+      delete stronghold_rewards[itemId]; //delete item from strongHold reward struct
+
+      // Stronghold is occupied by NPC
+      if (lordId == zero) {
+        delete items[itemId];
+        return(strConcat(uint2str(index), "", "", " index numbered stornghold lord is NPC. Should be given item for drop with id: ", uint2str(itemId) ) );
+      }
+
+      items[itemId].OWNER = heroes[lordId].OWNER;
+
+      // Kick out from Stronghold
+      strongholds[index].Hero = zero;
+      strongholds[index].CreatedBlock = block.number;
+
+      stronghold_reward_logs[blockNumber] = DropData(blockNumber, index + 1, itemId, lordId, previousBlock); //add data to the struct
+
+      // return ("Supreme success");
+      return(strConcat(uint2str(index), "", "", "is generated id for drop id: ", uint2str(itemId) ) ); // check if hero exist
+    }
+
+    /* function simpleDropItems(uint itemId) internal returns (string) {
       uint zero = 0;
       uint[10] memory occupied = [zero, zero, zero, zero, zero, zero, zero, zero, zero, zero];
       uint occupiedIndexesAmount = zero;
@@ -816,14 +850,14 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
       // return ("Supreme success");
       return(strConcat(uint2str(index), " generated id - ",uint2str(occupiedIndexesAmount), " - from ids, drop: ", uint2str(itemId))); // check if hero exist
-    }
+    } */
 
     function dropItems(uint itemId) public onlyOwner returns(string) {
         require(stronghold_rewards[itemId].ID > 0,
         "Not a reward item");
         require(block.number-blockNumber > blockDistance,
         "Please try again later");
-        return simpleDropItems(itemId);
+        return straightDropItems(itemId);
     }
 
     /* function rewardStrongholdLord(uint itemId, uint strongholdId) internal returns(string) {
