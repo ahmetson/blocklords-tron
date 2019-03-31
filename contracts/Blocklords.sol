@@ -448,8 +448,22 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     function putStronghold(uint shId, uint hId) public returns (uint) {
         require(strongholds[shId-1].CreatedBlock == 0, "Stronghold can not be overwritten");
 
+        /* bool isNotOwner = isNotStrongholdOwner(hId); */
+        require(isNotStrongholdOwner(hId), "Hero is already stronghold owner. Hero can be lord of only one stronghold");
+
         strongholds[shId-1] = Stronghold(shId, hId, block.number);
         return block.number;
+    }
+
+    function isNotStrongholdOwner(uint hId) internal view returns(bool) {
+
+      for(uint i=0; i<strongholdCount; i++) {
+        if (strongholds[i].CreatedBlock != 0) {
+          if (strongholds[i].Hero != hId)
+          return false;//, "Hero can hold only one stronghold");
+        }
+      }
+      return true;
     }
 
     function leaveStronghold(uint shId, uint heroId) public returns(bool){
