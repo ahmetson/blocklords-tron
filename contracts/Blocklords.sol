@@ -321,15 +321,15 @@ function randomFromAddress(address entropy) private view returns (uint8) {
         require(msg.value == (market_items_data[itemId].Price / 100 * requiredTransfer),
         "The value sent is incorrect"); // check transaction amount
 
-        uint city = market_items_data[itemId].City; // get the city id
+        uint cityIndex = market_items_data[itemId].City - 1; // get the city id
 
-        uint cityHero = cities[city].Hero;  // get the hero id
+        uint cityHero = cities[cityIndex].Hero;  // get the hero id
         address cityOwner = heroes[cityHero].OWNER; // get the hero owner
         address seller = market_items_data[itemId].Seller;
 
         uint amount = msg.value;
 
-        cities[market_items_data[itemId].City-1].MarketAmount = cities[market_items_data[itemId].City-1].MarketAmount - 1;
+        cities[cityIndex].MarketAmount = cities[cityIndex].MarketAmount - 1;
 
         if (cityHero > 0)
           cityOwner.transfer(amount / requiredTransfer * lordFee); // send 10% to city owner
@@ -365,6 +365,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
         uint MarketAmount;
     }
 
+    uint citiesCount = 16;
     City[16] public cities;
 
     mapping(uint => City[16]) public idToCity;
@@ -426,6 +427,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
     }
 
+    uint strongholdCount = 10;
     Stronghold[10] public strongholds;
 
     mapping(uint => Stronghold[10]) public idToStronghold;
@@ -777,7 +779,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
       // Update Block
       uint previousBlock = blockNumber;
       blockNumber = block.number; // this function can be called every "blockDistance" blocks
-      
+
       if (occupiedIndexesAmount == zero) {
           delete stronghold_rewards[itemId];
           delete items[itemId];
