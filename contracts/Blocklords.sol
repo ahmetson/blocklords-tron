@@ -291,7 +291,13 @@ function randomFromAddress(address entropy) private view returns (uint8) {
                 "Incorrect fee amount");
             }
 
-            require(market_items_data[itemId].Seller == 0x0000000000000000000000000000000000000000, "Item is already in the market");
+            if (market_items_data[itemId].Seller != 0x0000000000000000000000000000000000000000)
+            {
+              require (market_items_data[itemId].AuctionStartedTime+market_items_data[itemId].AuctionDuration<=now, "Item is already in the market");
+
+              uint cityIndex = market_items_data[itemId].City - 1;
+              cities[cityIndex].MarketAmount = cities[cityIndex].MarketAmount - 1;
+            }
 
             cities[city-1].CofferSize = cities[city-1].CofferSize + (msg.value/2);
 
