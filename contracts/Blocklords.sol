@@ -536,6 +536,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
             } else if (resultType[1] == PVP){ // strongholdBattleFee if atack Stronghold
                 require(msg.value == strongholdBattleFee,
                 "Incorrect fee amount");
+                require(isNotStrongholdOwner(attacker), "Hero is already stronghold owner. Hero can not attack to Strongholds to occupy another strongholds");
             } else if (resultType[1] == PVE){ // banditBattleFee if atack Bandit Camp
                 require(msg.value == banditBattleFee,
                 "Incorrect fee amount");
