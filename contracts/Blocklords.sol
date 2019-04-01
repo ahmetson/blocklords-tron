@@ -12,7 +12,8 @@ uint duration12Hours = 43200;     // 43_200 Seconds are 12 hours
 uint duration24Hours = 86400;     // 86_400 Seconds are 24 hours
 
 uint createHeroFee = 500000000; //TRX in SUN, 1 TRX * 1000000
-                   //___000000
+uint referalReward = 250000000;
+                      //000000
 uint fee8Hours =   50000000;
                  //__000000
 uint fee12Hours =  88000000;
@@ -99,33 +100,46 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
     mapping (uint => Hero) heroes;
 
-    function putHero(uint id, uint troopsCap, uint leadership,  uint intelligence, uint strength, uint speed, uint defense, uint item1, uint item2, uint item3, uint item4, uint item5) public payable returns(bool){
-            require(msg.value == createHeroFee, "Payment fee does not match");
+    event HeroCreation(address creator, uint id);
+    event HeroCreationWithReferalLink(address creator, uint id, address referer_address);
+
+    function putHero(uint id, uint referer_id, address referer_address, uint[6] heroStats, uint[5] hero_items) public payable returns(bool){
+
             require(id > 0,
             "Please insert id higher than 0");
             //require(payments[id].PAYER == owner, "Payer and owner do not match");
             require(heroes[id].OWNER == 0x0000000000000000000000000000000000000000,
             "Hero with this id already exists");
 
+            require(msg.value == createHeroFee, "Payment fee does not match");
+            if (referer_id > 0) {
+                require(heroes[referer_id].OWNER == referer_address,
+                "The referer is not in the game");
+                require(referer_address.send(referalReward), "Could not send referal reward");
+                emit HeroCreationWithReferalLink(msg.sender, id, referer_address);
+            }
+
             // TODO check item is not for stronghold reward
-             require(items[item1].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
-             require(items[item2].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
-             require(items[item3].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
-             require(items[item4].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
-             require(items[item5].OWNER != 0x0000000000000000000000000000000000000000, "Item is not exist");
+            require(items[hero_items[0]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(items[hero_items[1]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(items[hero_items[2]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(items[hero_items[3]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(items[hero_items[4]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
 
             //delete payments[id]; // delete payment hash after the hero was created in order to prevent double spend
-            heroes[id] = Hero(msg.sender, troopsCap, leadership,  intelligence, strength, speed, defense);
+            heroes[id] = Hero(msg.sender, heroStats[0], heroStats[1],  heroStats[2], heroStats[3], heroStats[4], heroStats[5]);
 
-            items[item1].OWNER = msg.sender;
-            items[item2].OWNER = msg.sender;
-            items[item3].OWNER = msg.sender;
-            items[item4].OWNER = msg.sender;
-            items[item5].OWNER = msg.sender;
+            items[hero_items[0]].OWNER = msg.sender;
+            items[hero_items[1]].OWNER = msg.sender;
+            items[hero_items[2]].OWNER = msg.sender;
+            items[hero_items[3]].OWNER = msg.sender;
+            items[hero_items[4]].OWNER = msg.sender;
 
+            emit HeroCreation(msg.sender, id);
 
             return true;
     }
+
 
     function getHero(uint id) public view returns(address, uint, uint, uint, uint, uint, uint){
             return (heroes[id].OWNER, heroes[id].TROOPS_CAP, heroes[id].LEADERSHIP, heroes[id].INTELLIGENCE, heroes[id].STRENGTH, heroes[id].SPEED, heroes[id].DEFENSE);
