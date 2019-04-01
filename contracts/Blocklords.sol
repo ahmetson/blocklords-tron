@@ -456,10 +456,12 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     }
 
     function isNotStrongholdOwner(uint hId) internal view returns(bool) {
-
+      if (hId == 0) {
+        return true;
+      }
       for(uint i=0; i<strongholdCount; i++) {
         if (strongholds[i].CreatedBlock != 0) {
-          if (strongholds[i].Hero != hId)
+          if (strongholds[i].Hero == hId)
           return false;//, "Hero can hold only one stronghold");
         }
       }
