@@ -16,9 +16,9 @@ uint referalReward = 250000000;
                       //000000
 uint fee8Hours =   50000000;
                  //__000000
-uint fee12Hours =  88000000;
+uint fee12Hours =  70000000;
                  //__000000
-uint fee24Hours = 100000000;
+uint fee24Hours = 88000000;
                 //___000000
 uint siegeBattleFee = 200000000;
                        //000000
