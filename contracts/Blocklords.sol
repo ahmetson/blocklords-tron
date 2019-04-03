@@ -812,6 +812,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
       uint lordId = strongholds[index].Hero;
 
       delete stronghold_rewards[itemId]; //delete item from strongHold reward struct
+      strongholds[index].CreatedBlock = block.number;
 
       // Stronghold is occupied by NPC
       if (lordId == zero) {
@@ -823,7 +824,6 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
       // Kick out from Stronghold
       strongholds[index].Hero = zero;
-      strongholds[index].CreatedBlock = block.number;
 
       stronghold_reward_logs[blockNumber] = DropData(blockNumber, index + 1, itemId, lordId, previousBlock); //add data to the struct
 
