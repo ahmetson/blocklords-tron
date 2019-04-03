@@ -205,7 +205,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
       return true;
     }
 
-    function updateItemsStats(uint[] itemIds, uint battleId) public {
+    function updateItemsStats(uint[] itemIds, uint battleId, uint battleResult) public {
       uint zero = 0;
       uint[5] memory existedItems = [zero, zero, zero, zero, zero];
       uint itemIndexesAmount = zero;
@@ -235,20 +235,23 @@ function randomFromAddress(address entropy) private view returns (uint8) {
             uint id = existedItems[randomIndex];
 
             // Increase XP that represents on how many battles the Item was involved into
-            items[id].XP = items[id].XP + 2;
+            if (battleResult == ATTACKER_WON)
+              items[id].XP = items[id].XP + 2;
+            else
+              items[id].XP = items[id].XP + 1;
 
             // Increase Level
             if (
-                items[id].LEVEL == 0 && items[id].XP == 2 ||
-                items[id].LEVEL == 1 && items[id].XP == 6 ||
-                items[id].LEVEL == 2 && items[id].XP == 20 ||
-                items[id].LEVEL == 3 && items[id].XP == 48 ||
-                items[id].LEVEL == 4 && items[id].XP == 92 ||
-                items[id].LEVEL == 5 && items[id].XP == 152 ||
-                items[id].LEVEL == 6 && items[id].XP == 228 ||
-                items[id].LEVEL == 7 && items[id].XP == 318 ||
-                items[id].LEVEL == 8 && items[id].XP == 434 ||
-                items[id].LEVEL == 9 && items[id].XP == 580
+                items[id].LEVEL == 0 && items[id].XP >= 2 ||
+                items[id].LEVEL == 1 && items[id].XP >= 6 ||
+                items[id].LEVEL == 2 && items[id].XP >= 20 ||
+                items[id].LEVEL == 3 && items[id].XP >= 48 ||
+                items[id].LEVEL == 4 && items[id].XP >= 92 ||
+                items[id].LEVEL == 5 && items[id].XP >= 152 ||
+                items[id].LEVEL == 6 && items[id].XP >= 228 ||
+                items[id].LEVEL == 7 && items[id].XP >= 318 ||
+                items[id].LEVEL == 8 && items[id].XP >= 434 ||
+                items[id].LEVEL == 9 && items[id].XP >= 580
                 ) {
 
                     items[id].LEVEL = items[id].LEVEL + 1;
@@ -578,7 +581,7 @@ function randomFromAddress(address entropy) private view returns (uint8) {
                 cities[defenderObject-1].CreatedBlock = block.number;
               }
             } else if (resultType[1] == PVE){
-                updateItemsStats(attackerItems, id);     // else if attackBandit ==> update item stats
+                updateItemsStats(attackerItems, id, resultType[0]);     // else if attackBandit ==> update item stats
             }
             return true;
     }
