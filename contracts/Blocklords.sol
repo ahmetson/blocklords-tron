@@ -4,136 +4,159 @@ import "./Ownable.sol";
 
 contract Blocklords is Ownable {
 
+/////////////////////////////////////   Constants    ////////////////////////////////////////////////
 
-/////////////////////////////////////   MISC    ////////////////////////////////////////////////
+  // Market Durations
+  uint constant HOURS_8       = 28800;      // 28_800 Seconds are 8 hours
+  uint constant HOURS_12      = 43200;     // 43_200 Seconds are 12 hours
+  uint constant HOURS_24      = 86400;     // 86_400 Seconds are 24 hours
 
-uint duration8Hours = 28800;      // 28_800 Seconds are 8 hours
-uint duration12Hours = 43200;     // 43_200 Seconds are 12 hours
-uint duration24Hours = 86400;     // 86_400 Seconds are 24 hours
+  // Battle Results
+  uint constant ATTACKER_WON  = 1;
+  uint constant ATTACKER_LOSE = 2;
 
-uint createHeroFee = 500000000; //TRX in SUN, 1 TRX * 1000000
-uint referalReward = 250000000;
-                      //000000
-uint fee8Hours =   50000000;
-                 //__000000
-uint fee12Hours =  70000000;
-                 //__000000
-uint fee24Hours = 88000000;
-                //___000000
-uint siegeBattleFee = 200000000;
-                       //000000
-uint banditBattleFee = 50000000;
-                     //__000000
-uint strongholdBattleFee = 100000000;
-                         //___000000
+  // Battle Types
+  uint constant PVP= 1;       // Player Against Player at the Strongholds
+  uint constant PVC= 2;       // Player Against City
+  uint constant PVE= 3;       // Player Against NPC on the map
 
-uint ATTACKER_WON = 1;
-uint ATTACKER_LOSE = 2;
-uint DRAW = 3;
+  // Fee Key Constants
+  string constant HERO_CREATION_FEE         = "HERO_CREATION_FEE"; //= 500000000; //TRX in SUN, 1 TRX * 1000000
+  string constant REFERAL_FEE               = "REFERAL_FEE";// = 250000000;
+  string constant HOURS_8_FEE               = "HOURS_8_FEE";// =   50000000;
+  string constant HOURS_12_FEE              = "HOURS_12_FEE";// =  70000000;
+  string constant HOURS_24_FEE              = "HOURS_24_FEE";// = 88000000;
+  string constant PVC_FEE                   = "PVC_FEE";// = 200000000;
+  string constant PVE_FEE                   = "PVE_FEE";// = 50000000;
+  string constant PVP_FEE                   = "PVP_FEE";// = 100000000;
+  string constant PURCHASE_PERCENTS         = "PURCHASE_PERCENTS";// = 115;
+  string constant LORD_PERCENTS             = "LORD_PERCENTS";// = 10;
+  string constant SELLING_COFFER_PERCENTS   = "SELLING_COFFER_PERCENTS";  // 50
+  string constant PVC_COFFER_PERCENTS       = "PVC_COFFER_PERCENTS";  // 50
+  string constant COFFER_PAY_PERCENTS       = "COFFER_PAY_PERCENTS";  // 30
+  string constant COFFER_REMAINING_PERCENTS = "COFFER_REMAINING_PERCENTS";  // 70
 
-uint PVP= 1;       // Player Against Player at the Strongholds
-uint PVC= 2;       // Player Against City
-uint PVE= 3;       // Player Against NPC on the map
+  string constant COFFER_INTERVAL_BLOCKS     = "COFFER_INTERVAL_BLOCKS";  // 150 000
+  string constant ITEM_DROP_INTERVAL_BLOCKS = "ITEM_DROP_INTERVAL_BLOCKS"; // 800
 
+  // Item Batch Type
+  uint constant STRONGHOLD_REWARD_BATCH = 0;
 
+/////////////////////////////////////   Options    /////////////////////////////////////
+  mapping ( string => uint ) options;
 
-uint coffersTotal = allCoffers();
+  function setOption(string key, uint value) public onlyOwner {
+    options[key] = value;
+  }
 
-function getBalance() public view returns(uint) {
-    return address(this).balance;
-}
+  function getOption(string key) public view returns (uint) {
+    return options[key];
+  }
 
-function withdraw(uint amount) public returns(bool) { //  withdraw  only to owner's address
-    if (amount == 0)
-         amount = getBalance();
-    require(amount < address(this).balance-coffersTotal, "balance is insufficient");  // Umcomment this requirement if you want the amount stored in coffers to be not withdrawable
-    address owner_ = owner();
-    owner_.transfer(amount);
-    return true;
-}
+/////////////////////////////////////   Coffers    /////////////////////////////////////
 
-function random(uint entropy, uint number) private view returns (uint8) {
-     // NOTE: This random generator is not entirely safe and   could potentially compromise the game,
-        return uint8(1 + uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, entropy)))%number);
+  uint coffersTotal = allCoffers();
+
+  function getBalance() public view returns(uint) {
+      return address(this).balance;
+  }
+
+  function withdraw(uint amount) public returns(bool) { //  withdraw  only to owner's address
+      if (amount == 0)
+           amount = getBalance();
+      uint coffers = allCoffers();
+      require(amount - coffers > 0, "GENERALLY_NOT_ENOUGH_MONEY");  // Umcomment this requirement if you want the amount stored in coffers to be not withdrawable
+      address owner_ = owner();
+      owner_.transfer(amount - coffers);
+      return true;
+  }
+
+  function random(uint entropy, uint number) private view returns (uint8) {
+       // NOTE: This random generator is not entirely safe and   could potentially compromise the game,
+          return uint8(1 + uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, entropy)))%number);
+     }
+
+  function randomFromAddress(address entropy) private view returns (uint8) {
+         return uint8(1 + uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, entropy)))%256);
    }
-
-function randomFromAddress(address entropy) private view returns (uint8) {
-       return uint8(1 + uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, entropy)))%256);
-   }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////// PAYMENT STRUCT ///////////////////////////////////////////////
-
-    struct Payment{
-        address PAYER;
-        uint HERO_ID;
-    }
-
-    mapping (uint => Payment) payments;
-
-    function heroCreationPayment(uint heroId) public payable returns(uint, uint, bool){
-        require(msg.value == createHeroFee, "Payment fee does not match");
-        payments[heroId] = Payment(msg.sender, heroId);
-        return(msg.value, createHeroFee, msg.value == createHeroFee);
-    }
-
-    function getPayments(uint heroId) public view returns(address, uint){
-        return(payments[heroId].PAYER, payments[heroId].HERO_ID);
-    } //TODO: add event
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 ///////////////////////////////////// HERO STRUCT ////////////////////////////////////////////////
 
     struct Hero{
         address OWNER;     // Wallet address of Player that owns Hero
-        uint TROOPS_CAP;   // Troops limit for this hero
         uint LEADERSHIP;   // Leadership Stat value
         uint INTELLIGENCE; // Intelligence Stat value
         uint STRENGTH;     // Strength Stat value
         uint SPEED;        // Speed Stat value
         uint DEFENSE;      // Defense Stat value
-        // bytes32 TX;     // Transaction ID where Hero creation was recorded
+        uint CREATED_TIME;
     }
 
     mapping (uint => Hero) heroes;
+    mapping (address => uint) playerHeroes;
+
+    function getPlayerHeroId(address heroOwner) public view returns(uint) {
+      if (heroOwner != 0x0000000000000000000000000000000000000000)
+        return playerHeroes[heroOwner];
+      return playerHeroes[msg.sender];
+    }
 
     event HeroCreation(address creator, uint id);
     event HeroCreationWithReferalLink(address creator, uint id, address referer_address);
 
-    function putHero(uint id, uint referer_id, address referer_address, uint[6] heroStats, uint[5] hero_items) public payable returns(bool){
-
-            require(id > 0,
-            "Please insert id higher than 0");
+    function putHero(uint id, uint referer_id, address referer_address, uint[] heroStats, uint[] heroItems, uint8 v, bytes32[2] rs) public payable returns(bool){
+      require(playerHeroes[msg.sender] == 0, "PLAYER_ALREADY_HAVE_A_HERO");
+            require(id > 0, "HERO_ID_MUST_BE_HIGHER");
             //require(payments[id].PAYER == owner, "Payer and owner do not match");
-            require(heroes[id].OWNER == 0x0000000000000000000000000000000000000000,
-            "Hero with this id already exists");
+            require(heroes[id].OWNER == 0x0000000000000000000000000000000000000000, "HERO_MUST_NOT_BE_ON_BLOCKCHAIN");
+            require(msg.value == options[HERO_CREATION_FEE], "HERO_CREATION_MUST_HAVE_CORRECT_ATTACHMENT");
+            require(msg.sender != owner(), "GAME_ADMIN_CAN_NOT_PLAY_GAME");
 
-            require(msg.value == createHeroFee, "Payment fee does not match");
             if (referer_id > 0) {
-                require(heroes[referer_id].OWNER == referer_address,
-                "The referer is not in the game");
-                require(referer_address.send(referalReward), "Could not send referal reward");
+                require(heroes[referer_id].OWNER == referer_address, "REFERER_NOT_EXISTS");
+                require(referer_address.send(options[REFERAL_FEE]), "REFERER_CAN_NOT_ACCEPT_YOUR_TRANSFERS");
                 emit HeroCreationWithReferalLink(msg.sender, id, referer_address);
             }
 
-            // TODO check item is not for stronghold reward
-            require(items[hero_items[0]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
-            require(items[hero_items[1]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
-            require(items[hero_items[2]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
-            require(items[hero_items[3]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
-            require(items[hero_items[4]].OWNER != 0x0000000000000000000000000000000000000000, "Item does not exist");
+            require(stronghold_rewards_batch[heroItems[0]] == 0, "ITEM_IN_STRONGHOLD_REWARD_BATCH");
+            require(stronghold_rewards_batch[heroItems[1]] == 0, "ITEM_IN_STRONGHOLD_REWARD_BATCH");
+            require(stronghold_rewards_batch[heroItems[2]] == 0, "ITEM_IN_STRONGHOLD_REWARD_BATCH");
+            require(stronghold_rewards_batch[heroItems[3]] == 0, "ITEM_IN_STRONGHOLD_REWARD_BATCH");
+            require(stronghold_rewards_batch[heroItems[4]] == 0, "ITEM_IN_STRONGHOLD_REWARD_BATCH");
+
+            require(items[heroItems[0]].OWNER == owner(), "ITEM_IS_NOT_IN_BLOCKCHAIN");
+            require(items[heroItems[0]].STAT_TYPE == 1, "ITEM_TYPE_IS_NOT_VALID");
+
+            require(items[heroItems[1]].OWNER == owner(), "ITEM_IS_NOT_IN_BLOCKCHAIN");
+            require(items[heroItems[1]].STAT_TYPE == 2, "ITEM_TYPE_IS_NOT_VALID");
+
+            require(items[heroItems[2]].OWNER == owner(), "ITEM_IS_NOT_IN_BLOCKCHAIN");
+            require(items[heroItems[2]].STAT_TYPE == 3, "ITEM_TYPE_IS_NOT_VALID");
+
+            require(items[heroItems[3]].OWNER == owner(), "ITEM_IS_NOT_IN_BLOCKCHAIN");
+            require(items[heroItems[3]].STAT_TYPE == 4, "ITEM_TYPE_IS_NOT_VALID");
+
+            require(items[heroItems[4]].OWNER == owner(), "ITEM_IS_NOT_IN_BLOCKCHAIN");
+            require(items[heroItems[4]].STAT_TYPE == 5, "ITEM_TYPE_IS_NOT_VALID");
+
+            require(heroStats[0] > 0, "STAT_MUST_BE_HIGHER");
+            require(heroStats[1] > 0, "STAT_MUST_BE_HIGHER");
+            require(heroStats[2] > 0, "STAT_MUST_BE_HIGHER");
+            require(heroStats[3] > 0, "STAT_MUST_BE_HIGHER");
+            require(heroStats[4] > 0, "STAT_MUST_BE_HIGHER");
+
+            require(v > 0, "SIGNATURE_PARAMETER_IS_INVALID");
+            require(checkHeroCreationSign(id, heroStats, heroItems, v, rs), "SIGNATURE_VALIDATION_FAILED");
 
             //delete payments[id]; // delete payment hash after the hero was created in order to prevent double spend
-            heroes[id] = Hero(msg.sender, heroStats[0], heroStats[1],  heroStats[2], heroStats[3], heroStats[4], heroStats[5]);
+            heroes[id] = Hero(msg.sender, heroStats[0], heroStats[1],  heroStats[2], heroStats[3], heroStats[4], block.number);
+            playerHeroes[msg.sender] = id;
 
-            items[hero_items[0]].OWNER = msg.sender;
-            items[hero_items[1]].OWNER = msg.sender;
-            items[hero_items[2]].OWNER = msg.sender;
-            items[hero_items[3]].OWNER = msg.sender;
-            items[hero_items[4]].OWNER = msg.sender;
+            items[heroItems[0]].OWNER = msg.sender;
+            items[heroItems[1]].OWNER = msg.sender;
+            items[heroItems[2]].OWNER = msg.sender;
+            items[heroItems[3]].OWNER = msg.sender;
+            items[heroItems[4]].OWNER = msg.sender;
 
             emit HeroCreation(msg.sender, id);
 
@@ -142,8 +165,8 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
 
     function getHero(uint id) public view returns(address, uint, uint, uint, uint, uint, uint){
-            return (heroes[id].OWNER, heroes[id].TROOPS_CAP, heroes[id].LEADERSHIP, heroes[id].INTELLIGENCE, heroes[id].STRENGTH, heroes[id].SPEED, heroes[id].DEFENSE);
-        }
+        return (heroes[id].OWNER, heroes[id].LEADERSHIP, heroes[id].INTELLIGENCE, heroes[id].STRENGTH, heroes[id].SPEED, heroes[id].DEFENSE, heroes[id].CREATED_TIME);
+    }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -170,30 +193,34 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     mapping (uint => uint) public updated_items;
 
     // creationType StrongholdReward: 0, createHero 1
-    function putItem(uint creationType, uint id, uint statType, uint quality, uint generation, uint statValue, uint level, uint xp, address itemOwner ) public onlyOwner { // only contract owner can put new items
-            require(id > 0,
-            "Please insert id higher than 0");
+    function putItem (
+      uint creationType,
+      uint id,
+      uint statType,
+      uint quality,
+      uint generation,
+      uint statValue
+    ) public onlyOwner {
+      require( id > 0, "ITEM_ID_MUST_BE_HIGHER" );
+      require( items[id].OWNER == 0x0000000000000000000000000000000000000000, "ITEM_IN_BLOCKCHAIN" );
 
-            if (itemOwner == 0x0000000000000000000000000000000000000000) {
-              itemOwner = msg.sender;
-            }
+      items[id] = Item(statType, quality, generation, statValue, 0, 0, msg.sender);
 
-            items[id] = Item(statType, quality, generation, statValue, level, xp, itemOwner);
-
-            if (creationType == 0){
-                addStrongholdReward(id);     //if putItem(stronghold reward) ==> add to StrongholdReward
-            }
-        }
+      if ( creationType == STRONGHOLD_REWARD_BATCH ) {
+        addStrongholdReward( id );     //if putItem(stronghold reward) ==> add to StrongholdReward
+      }
+    }
 
     function getItem(uint id) public view returns(uint, uint, uint, uint, uint, uint, address){
-            return (items[id].STAT_TYPE, items[id].QUALITY, items[id].GENERATION, items[id].STAT_VALUE, items[id].LEVEL, items[id].XP, items[id].OWNER);
-        }
+      return (items[id].STAT_TYPE, items[id].QUALITY, items[id].GENERATION, items[id].STAT_VALUE, items[id].LEVEL, items[id].XP, items[id].OWNER);
+    }
 
     function getUpdatedItem(uint battleId) public view returns(uint) {
       return updated_items[battleId];
     }
 
     function isUpgradableItem(uint id) private view returns (bool){
+      if (id == 0) return false;
       if (items[id].STAT_VALUE == 0) return false;
 
       if (items[id].QUALITY == 1 && items[id].LEVEL == 3) return false;
@@ -205,43 +232,39 @@ function randomFromAddress(address entropy) private view returns (uint8) {
       return true;
     }
 
-    function updateItemsStats(uint[] itemIds, uint battleId, uint battleResult) public {
+    function updateItemsStats(uint[5] itemIds, uint battleId, uint battleResult) public {
       uint zero = 0;
       uint[5] memory existedItems = [zero, zero, zero, zero, zero];
       uint itemIndexesAmount = zero;
 
       for (uint i=zero; i<itemIds.length; i++) {
-        if (itemIds[i] != zero) {
-
           // Check if Exp can be increased
           if (isUpgradableItem(itemIds[i])) {
 
             existedItems[itemIndexesAmount] = itemIds[i];
             itemIndexesAmount++;
           }
-        }
       }
 
-      //uint seed = block.number + item.GENERATION+item.LEVEL+item.STAT_VALUE+item.XP + itemIds.length + randomFromAddress(item.OWNER); // my poor attempt to make the random generation a little bit more random
+      // No Upgradable Items
+      if (itemIndexesAmount == zero) {
+        return;
+      }
 
-        if (itemIndexesAmount == zero) {
-          return;
-        }
-        uint seed = block.number + randomFromAddress(msg.sender) + getBalance();
+      uint seed = block.number + randomFromAddress(msg.sender) + getBalance();
+      uint randomIndex = random(seed, itemIndexesAmount);
+      randomIndex--; // It always starts from 1. While arrays start from 0
 
-        uint randomIndex = random(seed, itemIndexesAmount);
-        randomIndex--; // It always starts from 1. While arrays from 0
+      uint id = existedItems[randomIndex];
 
-            uint id = existedItems[randomIndex];
+      // Increase XP that represents on how many battles the Item was involved into
+      if (battleResult == ATTACKER_WON)
+        items[id].XP = items[id].XP + 2;
+      else
+        items[id].XP = items[id].XP + 1;
 
-            // Increase XP that represents on how many battles the Item was involved into
-            if (battleResult == ATTACKER_WON)
-              items[id].XP = items[id].XP + 2;
-            else
-              items[id].XP = items[id].XP + 1;
-
-            // Increase Level
-            if (
+      // Increase Level
+      if (
                 items[id].LEVEL == 0 && items[id].XP >= 2 ||
                 items[id].LEVEL == 1 && items[id].XP >= 6 ||
                 items[id].LEVEL == 2 && items[id].XP >= 20 ||
@@ -252,27 +275,13 @@ function randomFromAddress(address entropy) private view returns (uint8) {
                 items[id].LEVEL == 7 && items[id].XP >= 318 ||
                 items[id].LEVEL == 8 && items[id].XP >= 434 ||
                 items[id].LEVEL == 9 && items[id].XP >= 580
-                ) {
+      ) {
+        items[id].LEVEL = items[id].LEVEL + 1;
+        items[id].STAT_VALUE = items[id].STAT_VALUE + 1;
+        // return "Item level is increased by 1";
+      }
 
-                    items[id].LEVEL = items[id].LEVEL + 1;
-                    items[id].STAT_VALUE = items[id].STAT_VALUE + 1;
-                    // return "Item level is increased by 1";
-            }
-            // Increase Stats based on Quality
-            /* if (item.QUALITY == 1){
-                item.STAT_VALUE = item.STAT_VALUE + random(seed, 3);
-            } else if (item.QUALITY == 2){
-                item.STAT_VALUE = item.STAT_VALUE + random(seed, 3) + 3;
-            } else if (item.QUALITY == 2){
-                item.STAT_VALUE = item.STAT_VALUE + random(seed, 3) + 6;
-            } else if (item.QUALITY == 2){
-                item.STAT_VALUE = item.STAT_VALUE + random(seed, 3) + 9;
-            } else if (item.QUALITY == 2){
-                item.STAT_VALUE = item.STAT_VALUE + random(seed, 3) + 12;
-            } */
-            /* items[id] = item; */
-
-            updated_items[battleId] = id;
+      updated_items[battleId] = id;
     }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -282,8 +291,8 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     struct MarketItemData{
 
             uint Price; // Fixed Price of Item defined by Item owner
-            uint AuctionDuration; // 8, 12, 24 hours
-            uint AuctionStartedTime; // Unix timestamp in seconds
+            uint Duration; // 8, 12, 24 hours
+            uint CreatedTime; // Unix timestamp in seconds
             uint City; // City ID (item can be added onto the market only through cities.)
             address Seller; // Wallet Address of Item owner
             // bytes32 TX; // Transaction ID, (Transaction that has a record of Item Adding on Market)
@@ -292,78 +301,109 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
     mapping (uint => MarketItemData) market_items_data;
 
-    function addMarketItem(uint itemId, uint price, uint auctionDuration, uint city) public payable { // START AUCTION FUNCTION
-            require(items[itemId].OWNER == msg.sender, "You don't own this item");
-            require(auctionDuration == duration8Hours || auctionDuration == duration12Hours || auctionDuration == duration24Hours,
-            "Incorrect auction duration");
-            require(cities[city-1].MarketCap > cities[city-1].MarketAmount, "City Market Is Full"); // Also Checks that city exists
-            if (auctionDuration == duration8Hours){
-                require(msg.value == fee8Hours,
-                "Incorrect fee amount");
-            } else if (auctionDuration == duration12Hours){
-                require(msg.value == fee12Hours,
-                "Incorrect fee amount");
-            } else if (auctionDuration == duration24Hours){
-                require(msg.value == fee24Hours,
-                "Incorrect fee amount");
+    function addMarketItem(uint itemId, uint price, uint duration, uint city) public payable { // START AUCTION FUNCTION
+      require(msg.sender != owner(),                                                      "GAME_OWNER_IS_NOT_ALLOWED_TO_PLAY_GAME");
+            require(items[itemId].OWNER == msg.sender,                                    "MARKET_ITEM_MUST_BE_MANAGED_BY_OWNER");
+            require(price > 0,                                                            "MARKET_ITEM_PRICE_MUST_BE_HIGHER");
+            require(duration == HOURS_8 || duration == HOURS_12 || duration == HOURS_24,  "MARKET_ITEM_MUST_HAVE_VALID_DURATION");
+            require(hasCorrectMarketFee(duration),                                        "MARKET_ITEM_MUST_HAVE_CORRECT_FEE");
+            if (market_items_data[itemId].City != 0) {
+              bool notExpired = market_items_data[itemId].CreatedTime+market_items_data[itemId].Duration>now;
+              if (!notExpired) {
+                uint cityId2 = market_items_data[itemId].City;
+                cities[cityId2].MarketAmount = cities[cityId2].MarketAmount - 1;
+
+                delete market_items_data[itemId];
+              }
+              else {
+                require(!notExpired, "MARKET_ITEM_ALREADY_IN_BLOCKCHAIN");
+              }
+            }
+            /* require(removeMarketItemIfExpired(itemId),                                    "MARKET_ITEM_IN_BLOCKCHAIN_AND_ITS_DURATION_DID_NOT_EXPIRED"); */
+            require(cities[city].MarketCap > cities[city].MarketAmount,                  "MARKET_ITEM_MUST_CAN_NOT_BE_PUT_ON_FULL_MARKET"); // Also Checks that city exists
+
+            if ( options[SELLING_COFFER_PERCENTS] > 0) {
+              uint coffer = msg.value / 100 * options[SELLING_COFFER_PERCENTS];
+              cities[city].CofferSize = cities[city].CofferSize + coffer;
             }
 
-            if (market_items_data[itemId].Seller != 0x0000000000000000000000000000000000000000)
-            {
-              require (market_items_data[itemId].AuctionStartedTime+market_items_data[itemId].AuctionDuration<=now, "Item is already in the market");
+            cities[city].MarketAmount = cities[city].MarketAmount + 1;
 
-              uint cityIndex = market_items_data[itemId].City - 1;
-              cities[cityIndex].MarketAmount = cities[cityIndex].MarketAmount - 1;
-            }
-
-            cities[city-1].CofferSize = cities[city-1].CofferSize + (msg.value/2);
-
-            cities[city-1].MarketAmount = cities[city-1].MarketAmount + 1;
-
-            address seller = msg.sender;
-            uint auctionStartedTime = now;
-            market_items_data[itemId] = MarketItemData(price, auctionDuration, auctionStartedTime, city, seller);
-        }
-//
-    function getMarketItem(uint itemId) public view returns(uint, uint, uint, uint, address){
-            return(market_items_data[itemId].Price, market_items_data[itemId].AuctionDuration, market_items_data[itemId].AuctionStartedTime, market_items_data[itemId].City, market_items_data[itemId].Seller);
+            market_items_data[itemId] = MarketItemData(price, duration, now, city, msg.sender);
     }
 
-    uint requiredTransfer = 115;
-    uint lordFee = 10;
+    // It returns false, if item duration did mpt expire
+    /* function removeMarketItemIfExpired (uint itemId) internal returns(bool) {
+      if (market_items_data[itemId].Cmd != 0x0000000000000000000000000000000000000000) {
+        if (market_items_data[itemId].CreatedTime+market_items_data[itemId].Duration>=now) {
 
-    function buyMarketItem(uint itemId) public payable returns(bool) {
-        require(market_items_data[itemId].AuctionStartedTime+market_items_data[itemId].AuctionDuration>=now,
-        "Auction is no longer available"); // check  auction duration time
-        require(msg.value == (market_items_data[itemId].Price / 100 * requiredTransfer),
-        "The value sent is incorrect"); // check transaction amount
+          uint cityId = market_items_data[itemId].City;
+          cities[cityId].MarketAmount = cities[cityId].MarketAmount - 1;
 
-        uint cityIndex = market_items_data[itemId].City - 1; // get the city id
+            delete market_items_data[itemId];
+        } else {
+          return false;
+        }
+      }
+      return true;
+    } */
 
-        uint cityHero = cities[cityIndex].Hero;  // get the hero id
+    function hasCorrectMarketFee(uint duration) internal view returns(bool) {
+      if (duration == HOURS_8){
+          return msg.value == options[HOURS_8_FEE];
+      } else if (duration == HOURS_12){
+          return msg.value == options[HOURS_12_FEE];
+      } else if (duration == HOURS_24){
+          return msg.value == options[HOURS_24_FEE];
+      }
+      return false;
+    }
+//
+    function getMarketItem(uint itemId) public view returns(uint, uint, uint, uint, address){
+            return(market_items_data[itemId].Price, market_items_data[itemId].Duration, market_items_data[itemId].CreatedTime, market_items_data[itemId].City, market_items_data[itemId].Seller);
+    }
+
+    function buyMarketItem(uint itemId) public payable returns(string) {
+      require(msg.sender != market_items_data[itemId].Seller,                                   "MARKET_ITEM_CAN_NOT_BE_BOUGHT_BY_SELLER");
+      require(msg.value == (market_items_data[itemId].Price / 100 * options[PURCHASE_PERCENTS]),   "MARKET_ITEM_MUST_HAVE_CORRECT_ATTACHMENT"); // check transaction amount
+      bool notExpired = false;
+      notExpired = market_items_data[itemId].CreatedTime+market_items_data[itemId].Duration>now;
+      if (!notExpired) {
+        uint cityId2 = market_items_data[itemId].City;
+        cities[cityId2].MarketAmount = cities[cityId2].MarketAmount - 1;
+
+        delete market_items_data[itemId];
+
+        require(notExpired, "MARKET_ITEM_ALREADY_EXPIRED");
+      }
+      /* require(removeMarketItemIfExpired(itemId),                                               "MARKET_ITEM_DURATION_NOT_EXPIRED"); */
+      require(market_items_data[itemId].City != 0,   "MARKET_ITEM_NOT_IN_BLOCKCHAIN");
+
+        uint cityId = market_items_data[itemId].City; // get the city id
+
+        uint cityHero = cities[cityId].Hero;  // get the hero id
         address cityOwner = heroes[cityHero].OWNER; // get the hero owner
         address seller = market_items_data[itemId].Seller;
 
-        uint amount = msg.value;
+        cities[cityId].MarketAmount = cities[cityId].MarketAmount - 1;
 
-        cities[cityIndex].MarketAmount = cities[cityIndex].MarketAmount - 1;
+        uint zero = 0;
+        if (cityHero != zero)
+        {
+            uint lordFee = msg.value / options[PURCHASE_PERCENTS] * options[LORD_PERCENTS];
+            cityOwner.transfer(lordFee); // send 10% to city owner
+        }
 
-        if (cityHero > 0)
-          cityOwner.transfer(amount / requiredTransfer * lordFee); // send 10% to city owner
-        seller.transfer(amount / requiredTransfer * 100); // send 100% to seller
-
+        seller.transfer(market_items_data[itemId].Price); // send 100% to seller
         items[itemId].OWNER = msg.sender; // change owner
         delete market_items_data[itemId]; // delete auction
-        return (true);
-
+        return "Was paid";
     }
-//auctionCancel
-    function deleteMarketItem(uint itemId) public returns(bool){
-        require(market_items_data[itemId].Seller == msg.sender,
-                "You do not own this item");
-        cities[market_items_data[itemId].City-1].MarketAmount = cities[market_items_data[itemId].City-1].MarketAmount - 1;
+    function deleteMarketItem(uint itemId) public {
+        require(market_items_data[itemId].Seller == msg.sender, "MARKET_ITEM_MUST_BE_MANAGED_BY_OWNER");
+        cities[market_items_data[itemId].City].MarketAmount = cities[market_items_data[itemId].City].MarketAmount - 1;
         delete market_items_data[itemId];
-        return true;
+        /* return true; */
     }
 
 
@@ -382,54 +422,55 @@ function randomFromAddress(address entropy) private view returns (uint8) {
         uint MarketAmount;
     }
 
-    uint citiesCount = 16;
-    City[16] public cities;
+    uint cityAmount = 0;
+    mapping(uint => City) public cities;
 
-    mapping(uint => City[16]) public idToCity;
-
+    // cap argument is market capacity
     function putCity(uint id, uint size, uint cofferSize, uint cap) public payable onlyOwner {
-        require(msg.value == cofferSize,
-                "msg.value does not match cofferSize");
-        uint blank = 0;
-        cities[id-1] = City(id, blank, size, cofferSize, block.number, cap, blank );
+        require(msg.value == cofferSize, "CITY_MUST_HAVE_CORRECT_COFFER");
+        require(cities[id].ID == 0, "CITY_ALREADY_DEFINED");
+        require(id > 0, "CITY_MUST_HAVE_HIGHER_ID");
+        cities[id] = City(id, 0, size, cofferSize, block.number, cap, 0 );
+        cityAmount = cityAmount + 1;
     }
 
-    function getCityData(uint id) public view returns(uint, uint, uint, uint, uint, uint){
-        return (cities[id-1].Hero, cities[id-1].Size, cities[id-1].CofferSize, cities[id-1].CreatedBlock, cities[id-1].MarketCap, cities[id-1].MarketAmount);
+    function getCity(uint id) public view returns(uint, uint, uint, uint, uint, uint){
+        return (cities[id].Hero, cities[id].Size, cities[id].CofferSize, cities[id].CreatedBlock, cities[id].MarketCap, cities[id].MarketAmount);
+    }
 
+    function getCityAmount() public view returns(uint) {
+      return cityAmount;
     }
 
     function allCoffers() public view returns(uint){
         uint total = 0;
-        for (uint i=0; i < cities.length ; i++){
+        for (uint i=1; i < cityAmount ; i++){
             total += cities[i].CofferSize;
         }
         return total;
     }
 
     uint cofferBlockNumber = block.number;
-    uint CofferBlockDistance = 1;//150000;
 
-    function dropCoffer() public {   // drop coffer (every 25 000 blocks) ==> 30% coffer goes to cityOwner
-        require(block.number-cofferBlockNumber > CofferBlockDistance,
-        "Please try again later");
+    function payCoffers() public {   // drop coffer (every 25 000 blocks) ==> 30% coffer goes to cityOwner
+        require(block.number-cofferBlockNumber > options[COFFER_INTERVAL_BLOCKS], "COFFER_PAYING_IS_TOO_EARLY");
 
         cofferBlockNumber = block.number; // this function can be called every "cofferBlockNumber" blocks
 
-        for (uint cityNumber=0; cityNumber < citiesCount ; cityNumber++){ // loop through each city
+        for (uint cityNumber=1; cityNumber < cityAmount ; cityNumber++){ // loop through each city
 
             uint cityHero = cities[cityNumber].Hero;
 
-            if (cityHero > 0){
+            if (heroes[cityHero].OWNER != 0x0000000000000000000000000000000000000000) {
               address heroOwner = heroes[cityHero].OWNER;
-              uint transferValue = (cities[cityNumber].CofferSize/100)*30;
-              cities[cityNumber].CofferSize = (cities[cityNumber].CofferSize/100)*70;
+              uint transferValue = (cities[cityNumber].CofferSize/100)*options[COFFER_PAY_PERCENTS];
+              cities[cityNumber].CofferSize = (cities[cityNumber].CofferSize/100)*options[COFFER_REMAINING_PERCENTS];
               heroOwner.transfer(transferValue);
             } // else it is goes to nowhere, which means will stay on contract and will be transferred NPC owner.
         }
     }
 
-    function getDropCofferBlock() public view returns(uint) {
+    function getCoffersBlock() public view returns(uint) {
       return (cofferBlockNumber);
     }
 
@@ -444,71 +485,40 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
     }
 
-    uint strongholdCount = 10;
-    Stronghold[10] public strongholds;
+    uint strongholdAmount = 0;
+    mapping(uint => Stronghold) public strongholds;
 
-    mapping(uint => Stronghold[10]) public idToStronghold;
 
-    function changeStrongholdOwner(uint id, uint hero) public {
-            require(heroes[hero].OWNER != 0x0000000000000000000000000000000000000000,
-            "There is no such hero");
-            require(heroes[hero].OWNER == msg.sender,
-            "You dont own this hero");
-
-            strongholds[id] = Stronghold(id, hero, block.number); // Stronghold ID is the only id that starts from 0, all other id's start from 1
+    function getStronghold(uint shId) public view returns(uint, uint){
+            return(strongholds[shId].Hero, strongholds[shId].CreatedBlock);
     }
 
-    function getStrongholdData(uint shId) public view returns(uint, uint){
-            return(strongholds[shId-1].Hero, strongholds[shId-1].CreatedBlock);
+    function putStronghold(uint shId) public {
+      require(shId > 0, "STRONGHOLD_ID_MUST_BE_HIGHER");
+      require(strongholds[shId].CreatedBlock == 0, "STRONGHOLD_CAN_NOT_BE_OVERRITTEN");
+
+        strongholds[shId] = Stronghold(shId, 0, block.number);
+        strongholdAmount = strongholdAmount + 1;
     }
 
-    function putStronghold(uint shId, uint hId) public returns (uint) {
-        require(strongholds[shId-1].CreatedBlock == 0, "Stronghold can not be overwritten");
-
-        /* bool isNotOwner = isNotStrongholdOwner(hId); */
-        require(isNotStrongholdOwner(hId), "Hero is already stronghold owner. Hero can be lord of only one stronghold");
-
-        strongholds[shId-1] = Stronghold(shId, hId, block.number);
-        return block.number;
-    }
-
-    function isNotStrongholdOwner(uint hId) internal view returns(bool) {
-      if (hId == 0) {
-        return true;
-      }
-      for(uint i=0; i<strongholdCount; i++) {
-        if (strongholds[i].CreatedBlock != 0) {
-          if (strongholds[i].Hero == hId)
-          return false;//, "Hero can hold only one stronghold");
+    function isStrongholdOwner(uint hId) internal view returns(bool) {
+      uint zero = 0;
+      if (hId != zero) {
+        for(uint i=1; i<strongholdAmount; i++) {
+          if (strongholds[i].Hero == hId) {
+            return true;//, "Hero can hold only one stronghold");
+          }
         }
       }
-      return true;
+      return false;
     }
-
-    function leaveStronghold(uint shId, uint heroId) public returns(bool){
-            require(strongholds[shId-1].Hero == heroId,
-            "Selected hero is not in the stronghold");
-             require(heroes[heroId].OWNER == msg.sender,
-            "You do not own this hero");
-            strongholds[shId-1].Hero = 0;
-            //strongholds[shId-1].CreatedBlock = block.number;
-            return true;
-    }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////// STRONGLOHD REWARD STRUCT /////////////////////////////////////////////////////////
 
-    struct StrongholdReward{
+    mapping (uint => uint) public stronghold_rewards_batch;
 
-        uint ID;           // Item ID
-        uint CreatedBlock; // The Blockchain Height
-    }
-
-    mapping (uint => StrongholdReward) public stronghold_rewards;
-
-    function addStrongholdReward(uint id) public onlyOwner returns(bool){
-        stronghold_rewards[id] = StrongholdReward(id, block.number);
+    function addStrongholdReward(uint id) public onlyOwner{
+        stronghold_rewards_batch[id] = block.number;
     }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -517,14 +527,14 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
     struct BattleLog{
 
-        uint[] BattleResultType; // BattleResultType[0]: 0 - Attacker WON, 1 - Attacker Lose ; BattleResultType[1]: 0 - City, 1 - Stronghold, 2 - Bandit Camp
+        uint[2] BattleResultType; // BattleResultType[0]: 0 - Attacker WON, 1 - Attacker Lose ; BattleResultType[1]: 0 - City, 1 - Stronghold, 2 - Bandit Camp
         uint Attacker;
-        uint[] AttackerTroops;       // Attacker's troops amount that were involved in the battle & remained troops
-        uint[] AttackerItems;        // Item IDs that were equipped by Attacker during battle.
+        uint[2] AttackerTroops;       // Attacker's troops amount that were involved in the battle & remained troops
+        uint[5] AttackerItems;        // Item IDs that were equipped by Attacker during battle.
         uint DefenderObject;   // City|Stronghold|NPC ID based on battle type
         uint Defender;         // City Owner ID|Stronghold Owner ID or NPC ID
-        uint[] DefenderTroops;
-        uint[] DefenderItems;
+        uint[2] DefenderTroops;
+        uint[5] DefenderItems;
         uint Time;             // Unix Timestamp in seconds. Time, when battle happened
         // bytes32 TX;                   // Transaction where Battle Log was recorded.
         }
@@ -533,57 +543,65 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
     // result type: win or lose/ battle type
     // last parameter 'dropItem' is only for contest version of game
-    function addBattleLog(uint id, uint[] resultType, uint attacker, uint[] attackerTroops, uint[] attackerItems,
-                          uint defenderObject, uint defender, uint[] defenderTroops, uint[] defenderItems )//, uint itemDrop*/)
-
-                          public payable returns (bool){
-
-            require(resultType.length <=2 && resultType[0] <= 2 && resultType[1] <= 3 ,
-                    "Incorrect number of result parametres or incorrect parametres");
-            require(attackerTroops.length == 2,
-                    "Incorrect number of arguments for attackerTroops");
-            require(attackerItems.length <= 5,
-                    "incorrect number of attacker items");
-            require(defenderTroops.length == 2,
-                    "Incorrect number of arguments for defenderTroops");
-            require(defenderItems.length <=5,
-                    "incorrect number of defender items");
-
-            if (resultType[1] == PVC){ // siegeBattleFee if atack City
-                require(msg.value == siegeBattleFee,
-                "Incorrect fee amount");
-            } else if (resultType[1] == PVP){ // strongholdBattleFee if atack Stronghold
-                require(msg.value == strongholdBattleFee,
-                "Incorrect fee amount");
-                require(isNotStrongholdOwner(attacker), "Hero is already stronghold owner. Hero can not attack to Strongholds to occupy another strongholds");
-            } else if (resultType[1] == PVE){ // banditBattleFee if atack Bandit Camp
-                require(msg.value == banditBattleFee,
-                "Incorrect fee amount");
-            }
-
-            uint time = now;
+    function addBattleLog(
+      uint id, // Battle ID
+      uint[2] resultType,
+      uint attacker, // Attacker ID
+      uint[2] attackerTroops,
+      uint[5] attackerItems,
+      uint defenderObject, // Bandit Camp ID, Stronghold ID or City ID
+      uint defender,  // Defender Lord ID
+      uint[2] defenderTroops,
+      uint[5] defenderItems,
+      uint8 v, bytes32[2] rs )
+      //, uint itemDrop*/)
+          public payable {
+            require(msg.sender != owner(), "BATTLE_LOG_IS_NOT_CONSIDERING_GAME_DEVELOPER_AS_PLAYER");
+            require(battle_logs[id].Attacker == 0, "BATTLE_LOG_IS_ON_BLOCKCHAIN");
+            /* require(resultType.length == 2, "BATTLE_LOG_MUST_HAVE_RESULT_PARAMETER"); */
+            require(resultType[0] >= 1 && resultType[0] <= 2, "BATTLE_LOG_MUST_HAVE_CORRECT_RESULT_PARAMETER");
+            require(resultType[1] >= 1 && resultType[1] <= 3, "BATTLE_LOG_MUST_HAVE_CORRECT_TYPE_PARAMETER");
+            /* require(attackerTroops.length == 2, "BATTLE_LOG_MUST_HAVE_ATTACKER_TROOPS_PARAMETER"); */
+            /* require(attackerItems.length == 5, "BATTLE_LOG_MUST_HAVE_ATTACKER_ITEMS_LIST_PARAMETER"); */
+            /* require(defenderTroops.length == 2, "BATTLE_LOG_MUST_HAVE_DEFENDER_TROOPS_PARAMETER"); */
+            /* require(defenderItems.length ==5, "BATTLE_LOG_MUST_HAVE_DEFENDER_ITEMS_LIST_PARAMETER"); */
+            require(hasCorrectBattleFeeAndNotStrongholdOwner(resultType[1], attacker), "BATTLE_LOG_MUST_HAVE_CORRECT_FEE_OR_LORD_IS_STRONGHOLD_OWNER");
+            require(checkBattleLogSign(id, resultType, attacker, attackerTroops,attackerItems,defenderObject, defender,defenderTroops,defenderItems, v, rs), "SIGNATURE_VALIDATION_FAILED");
 
             battle_logs[id] = BattleLog(resultType, attacker, attackerTroops,
                                         attackerItems, defenderObject, defender,
-                                        defenderTroops, defenderItems, time); //add data to the struct
+                                        defenderTroops, defenderItems, now); //add data to the struct
 
-            //            if (resultType[0] == ATTACKER_WON) {
-            //                items[dropItem].OWNER = msg.sender;
-            //            }
+            uint zero = 0;
 
             if (resultType[0] == ATTACKER_WON && resultType[1] == PVP){
-                strongholds[defenderObject-1].Hero = attacker; // if attack Stronghold && WIN ==> change stronghold Owner
-                strongholds[defenderObject-1].CreatedBlock = block.number;
+                strongholds[defenderObject].Hero = attacker; // if attack Stronghold && WIN ==> change stronghold Owner
+                strongholds[defenderObject].CreatedBlock = block.number;
             } else if (resultType[1] == PVC) {
-              cities[defenderObject-1].CofferSize = cities[defenderObject-1].CofferSize + (siegeBattleFee / 2);
+              if (options[PVC_FEE] != zero && options[PVC_COFFER_PERCENTS] != zero ) {
+                cities[defenderObject].CofferSize = cities[defenderObject].CofferSize + (options[PVC_FEE] / 100 * options[PVC_COFFER_PERCENTS]);
+              }
               if (resultType[0] == ATTACKER_WON) {
-                cities[defenderObject-1].Hero = attacker; // else if attack City && WIN ==> change city owner
-                cities[defenderObject-1].CreatedBlock = block.number;
+                cities[defenderObject].Hero = attacker; // else if attack City && WIN ==> change city owner
+                cities[defenderObject].CreatedBlock = block.number;
               }
             } else if (resultType[1] == PVE){
                 updateItemsStats(attackerItems, id, resultType[0]);     // else if attackBandit ==> update item stats
             }
-            return true;
+    }
+
+    function hasCorrectBattleFeeAndNotStrongholdOwner(uint battleType, uint attacker) internal view returns(bool) {
+      if (battleType == PVC){ // options[PVC_FEE] if atack City
+          return (msg.value == options[PVC_FEE]);
+      } else if (battleType == PVP){ // options[PVP_FEE] if atack Stronghold
+          if (msg.value == options[PVP_FEE]) {
+            return !isStrongholdOwner(attacker);
+          }
+      } else if (battleType == PVE){ // options[PVE_FEE] if atack Bandit Camp
+          return (msg.value == options[PVE_FEE]);
+      }
+
+      return false;
     }
 
 
@@ -598,7 +616,6 @@ function randomFromAddress(address entropy) private view returns (uint8) {
     }
 
     uint blockNumber = block.number;
-    uint blockDistance = 1; // 800 in original
 
     mapping(uint => DropData) public stronghold_reward_logs;
 
@@ -606,198 +623,8 @@ function randomFromAddress(address entropy) private view returns (uint8) {
       return (blockNumber);
     }
 
-    /*
-      Stronghold Timer
-
-      StrongholdTimer global variable
-
-      When Putting Stronghold:
-      Check if global variable is 0
-
-    */
-
-    /* function minimize(uint number) internal pure returns (uint) {
-        if (number >= 100000000)
-      return number / 100000000;
-        if (number >= 10000000)
-      return number / 10000000;
-        if (number >= 1000000)
-      return number / 1000000;
-        if (number >= 100000)
-      return number / 100000;
-        if (number >= 10000)
-      return number / 10000;
-        if (number >= 1000)
-      return number / 1000;
-        if (number >= 100)
-      return number / 100;
-        if (number >= 10)
-      return number / 10;
-        return  number;
-    } */
-
-    /* function complexDropItems(uint itemId) internal returns(string) {
-      uint total = 0;
-      uint[10] memory ranges = [ total, total, total, total, total, total, total, total, total, total ];
-
-      if (strongholds[0].Hero > 0) {
-        // 200 - 100 => 100
-          total = minimize(block.number - strongholds[0].CreatedBlock);
-      }
-      ranges[0] = total;   // 100
-
-
-
-      if (strongholds[1].Hero > 0) { // 0, skipping
-          total = minimize(total + (block.number - strongholds[1].CreatedBlock));
-      }
-      ranges[1] = total;   // 100
-
-
-
-      if (strongholds[2].Hero > 0) {
-        // 200 - 50 + 100 => 150
-          total = minimize(total + (block.number - strongholds[2].CreatedBlock));
-      }
-      ranges[2] = total;
-
-
-      if (strongholds[3].Hero > 0) {
-        // 200 - 150 + 150 => 200
-          total = minimize(total + (block.number - strongholds[3].CreatedBlock));
-      }
-      ranges[3] = total;
-
-
-      if (strongholds[4].Hero > 0) {
-        // 0
-          total =minimize(total + (block.number - strongholds[4].CreatedBlock));
-      }
-      ranges[4] = total;
-
-      if (strongholds[5].Hero > 0) {
-        // 0
-          total = minimize(total + (block.number - strongholds[5].CreatedBlock));
-      }
-      ranges[5] = total;
-
-
-      if (strongholds[6].Hero > 0) {
-        // 200 - 25 + 200 => 375
-          total = minimize(total + (block.number - strongholds[6].CreatedBlock));
-      }
-      ranges[6] = total;
-
-
-      if (strongholds[7].Hero > 0) {
-        // 200 - 75 + 375 => 500
-          total = minimize(total + (block.number - strongholds[7].CreatedBlock));
-      }
-      ranges[7] = total;
-
-
-      if (strongholds[8].Hero > 0) {
-        // 0
-          total = minimize(total + (block.number - strongholds[8].CreatedBlock));
-      }
-      ranges[8] = total;
-      if (strongholds[9].Hero > 0) {
-        // 0
-           total = minimize(total + (block.number - strongholds[9].CreatedBlock));
-      }
-      ranges[9] = total;
-
-      if (total < 1)
-      {
-        return("All Strongholds have an NPC");
-      }
-
-// 1 - 100, 2 - 0, 3 - 150, 4 - 200, 5 - 0, 6 - 0, 7 - 375, 8 - 500, 9 - 0, 10 - 0
-      uint seed = randomFromAddress(msg.sender);// + block.number;
-
-      // 333 - 1 => 332
-      uint dot = random(seed, total); // select randomly stronghold
-
-      uint strongholdId = 0;
-
-      // skipping
-      if (strongholds[9].Hero > 0) {
-          if (dot > ranges[8] && dot <= ranges[9]) {
-              strongholdId = 10;
-          }
-      }
-      // skipping
-      if (strongholds[8].Hero > 0) {
-          if (dot > ranges[7] && dot <= ranges[8]) {
-            strongholdId = 9;
-          }
-      }
-      // 332 < 500 => true, strongHold = 8
-      if (strongholds[7].Hero > 0) {
-          if (dot > ranges[6] && dot <= ranges[7]) {
-            strongholdId = 8;
-          }
-      }
-      // 332 < 375 => true, stronghold = 7
-      if (strongholds[6].Hero > 0) {
-          if (dot > ranges[5] && dot <= ranges[6]) {
-            strongholdId = 7;
-          }
-      }
-      if (strongholds[5].Hero > 0) {
-          if (dot > ranges[4] && dot <= ranges[5]) {
-            strongholdId = 6;
-          }
-      }
-      if (strongholds[4].Hero > 0) {
-          if (dot > ranges[3] && dot <= ranges[4]) {
-            strongholdId = 5;
-          }
-      }
-      if (strongholds[3].Hero > 0) {
-          if (dot > ranges[2] && dot <= ranges[3]) {
-            strongholdId = 4;
-          }
-      }
-      if (strongholds[2].Hero > 0) {
-          if (dot > ranges[1] && dot <= ranges[2]) {
-            strongholdId = 3;
-          }
-      }
-      if (strongholds[1].Hero > 0) {
-          if (dot > ranges[0] && dot <= ranges[1]) {
-            strongholdId = 2;
-          }
-      }
-      if (strongholds[0].Hero > 0) {
-          if (dot > 0 && dot <= ranges[0]) {
-            strongholdId = 1;
-          }
-      }
-
-      if (strongholdId != 0) {
-        uint lordId = strongholds[strongholdId-1].Hero;
-
-        items[itemId].OWNER = heroes[lordId].OWNER;
-
-        delete stronghold_rewards[itemId]; //delete item from strongHold reward struct
-        delete strongholds[strongholdId-1];
-
-        // Update Block
-        uint previousBlock = blockNumber;
-        blockNumber = block.number; // this function can be called every "blockDistance" blocks
-
-        stronghold_reward_logs[blockNumber] = DropData(blockNumber, strongholdId, itemId, lordId, previousBlock); //add data to the struct
-
-        // return ("Supreme success");
-        return(strConcat(uint2str(dot), " ",uint2str(total), uint2str(strongholdId), uint2str(itemId))); // check if hero exist
-          //return rewardStrongholdLord(itemId, strongholdId);
-      }
-
-      return ("Failed to reward stronghold lord");
-    } */
-
     function straightDropItems(uint itemId) internal returns (string) {
+      require(strongholdAmount > 0, "How can you drop Items. Initialize Strongholds first");
       uint zero = 0;
 
       //uint seed = block.number + item.GENERATION+item.LEVEL+item.STAT_VALUE+item.XP + itemIds.length + randomFromAddress(item.OWNER); // my poor attempt to make the random generation a little bit more random
@@ -807,99 +634,38 @@ function randomFromAddress(address entropy) private view returns (uint8) {
 
       uint seed = block.number + randomFromAddress(msg.sender) + getBalance();
 
-      uint index = random(seed, strongholdCount) - 1;
+      uint id = random(seed, strongholdAmount);
 
-      uint lordId = strongholds[index].Hero;
+      uint lordId = strongholds[id].Hero;
 
-      delete stronghold_rewards[itemId]; //delete item from strongHold reward struct
-      strongholds[index].CreatedBlock = block.number;
+      delete stronghold_rewards_batch[itemId]; //delete item from strongHold reward struct
+      strongholds[id].CreatedBlock = block.number;
 
       // Stronghold is occupied by NPC
       if (lordId == zero) {
         delete items[itemId];
-        return(strConcat(uint2str(index), "", "", " index numbered stornghold lord is NPC. Should be given item for drop with id: ", uint2str(itemId) ) );
+        return(strConcat(uint2str(id), "", "", " index numbered stornghold lord is NPC. Should be given item for drop with id: ", uint2str(itemId) ) );
       }
 
       items[itemId].OWNER = heroes[lordId].OWNER;
 
       // Kick out from Stronghold
-      strongholds[index].Hero = zero;
+      strongholds[id].Hero = zero;
 
-      stronghold_reward_logs[blockNumber] = DropData(blockNumber, index + 1, itemId, lordId, previousBlock); //add data to the struct
+      stronghold_reward_logs[blockNumber] = DropData(blockNumber, id, itemId, lordId, previousBlock); //add data to the struct
 
       // return ("Supreme success");
-      return(strConcat(uint2str(index), "", "", "is generated id for drop id: ", uint2str(itemId) ) ); // check if hero exist
+      return(strConcat(uint2str(id), "", "", "is generated id for drop id: ", uint2str(itemId) ) ); // check if hero exist
     }
 
-    /* function simpleDropItems(uint itemId) internal returns (string) {
-      uint zero = 0;
-      uint[10] memory occupied = [zero, zero, zero, zero, zero, zero, zero, zero, zero, zero];
-      uint occupiedIndexesAmount = zero;
-
-      for (uint i=zero; i<10; i++) {
-        if (strongholds[i].Hero > zero) {
-          occupied[occupiedIndexesAmount] = i;
-          occupiedIndexesAmount++;
-        }
-      }
-
-      //uint seed = block.number + item.GENERATION+item.LEVEL+item.STAT_VALUE+item.XP + itemIds.length + randomFromAddress(item.OWNER); // my poor attempt to make the random generation a little bit more random
-      // Update Block
-      uint previousBlock = blockNumber;
-      blockNumber = block.number; // this function can be called every "blockDistance" blocks
-
-      if (occupiedIndexesAmount == zero) {
-          delete stronghold_rewards[itemId];
-          delete items[itemId];
-          return "All strongholds are occupied by NPC";
-      }
-      uint seed = block.number + randomFromAddress(msg.sender) + getBalance();
-
-      uint index = random(seed, occupiedIndexesAmount);
-      index = occupied[index - 1];
-
-      uint lordId = strongholds[index].Hero;
-
-      items[itemId].OWNER = heroes[lordId].OWNER;
-
-      delete stronghold_rewards[itemId]; //delete item from strongHold reward struct
-      delete strongholds[index];
-
-      stronghold_reward_logs[blockNumber] = DropData(blockNumber, index + 1, itemId, lordId, previousBlock); //add data to the struct
-
-      // return ("Supreme success");
-      return(strConcat(uint2str(index), " generated id - ",uint2str(occupiedIndexesAmount), " - from ids, drop: ", uint2str(itemId))); // check if hero exist
-    } */
 
     function dropItems(uint itemId) public onlyOwner returns(string) {
-        require(stronghold_rewards[itemId].ID > 0,
-        "Not a reward item");
-        require(block.number-blockNumber > blockDistance,
-        "Please try again later");
+        require(stronghold_rewards_batch[itemId] > 0, "STRONGHOLD_REWARD_BATCH_MUST_HAVE_ITEM");
+        require(block.number-blockNumber > options[ITEM_DROP_INTERVAL_BLOCKS], "STRONGHOLD_REWARD_TIME_IS_TOO_EARLY");
         return straightDropItems(itemId);
     }
 
-    /* function rewardStrongholdLord(uint itemId, uint strongholdId) internal returns(string) {
-
-        uint lordId = strongholds[strongholdId-1].Hero;
-
-        items[itemId].OWNER = heroes[lordId].OWNER;
-
-        delete stronghold_rewards[itemId]; //delete item from strongHold reward struct
-        delete strongholds[strongholdId-1];
-
-        // Update Block
-        uint previousBlock = blockNumber;
-        blockNumber = block.number; // this function can be called every "blockDistance" blocks
-
-        stronghold_reward_logs[blockNumber] = DropData(blockNumber, strongholdId, itemId, lordId, previousBlock); //add data to the struct
-
-        // return ("Supreme success");
-        return(uint2str(strongholdId)); // check if hero exist
-    } */
-
     // Pass 0 as an Argument to retreive block for latest one
-    // TODO return Stronghold id that started from 1.
     function getDropData(uint blockAsKey) public view returns(uint, uint, uint, uint) {
         if (blockAsKey == 0)
             blockAsKey = blockNumber;
@@ -931,5 +697,134 @@ function randomFromAddress(address entropy) private view returns (uint8) {
   }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Signnature Testing
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    address deployer = msg.sender;
+
+    /* uint id, uint referer_id, address referer_address, uint[5] heroStats, uint[5] heroItems */
+
+    function prefixedHeroMessage(uint id, uint[] heroStats, uint[] heroItems) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked('\x19TRON Signed Message:\n32', id,
+          heroStats, heroItems));
+    }
+
+    function checkHeroCreationSign(uint id, uint[] heroStats, uint[] heroItems, uint8 v, bytes32[2] rs) public view returns(bool) {
+      bytes32 message = prefixedHeroMessage(id, heroStats, heroItems);
+
+      return ecrecover(message, v, rs[0], rs[1]) == deployer;
+    }
+
+    function prefixedBattleLogMessage(uint id, // Battle ID
+      uint[2] resultType,
+      uint attacker, // Attacker ID
+      uint[2] attackerTroops,
+      uint[5] attackerItems,
+      uint defenderObject, // Bandit Camp ID, Stronghold ID or City ID
+      uint defender,  // Defender Lord ID
+      uint[2] defenderTroops,
+      uint[5] defenderItems) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked('\x19TRON Signed Message:\n32', id, resultType, attacker, attackerTroops, attackerItems, defenderObject, defender, defenderTroops, defenderItems));
+    }
+
+    function checkBattleLogSign(uint id, // Battle ID
+      uint[2] resultType,
+      uint attacker, // Attacker ID
+      uint[2] attackerTroops,
+      uint[5] attackerItems,
+      uint defenderObject, // Bandit Camp ID, Stronghold ID or City ID
+      uint defender,  // Defender Lord ID
+      uint[2] defenderTroops,
+      uint[5] defenderItems,
+      uint8 v, bytes32[2] rs) public view returns(bool) {
+      bytes32 message = prefixedBattleLogMessage(id, resultType, attacker, attackerTroops, attackerItems, defenderObject, defender, defenderTroops, defenderItems);
+
+      return ecrecover(message, v, rs[0], rs[1]) == deployer;
+    }
+
+    //function checkSign(bytes32 message, bytes sig) public view returns(string) {
+    function checkSign(string str1, string str2, uint8 v, bytes32 r, bytes32 s) public view returns(string) {
+
+        // This recreates the message that was signed on the client.
+        bytes32 message = prefixed(str1, str2);
+
+        /* require(recoverSigner(message, sig) == deployer, "Message is not verified"); */
+        require(ecrecover(message, v, r, s) == deployer, " Message was not verified!");
+
+
+        // msg.sender.transfer(amount);
+        return "Message was done!";
+
+    }
+
+    function checkArrSign(uint[] arr, uint8 v, bytes32 r, bytes32 s) public view returns(string) {
+
+        // This recreates the message that was signed on the client.
+        bytes32 message = prefixedArr(arr);
+
+        /* require(recoverSigner(message, sig) == deployer, "Message is not verified"); */
+        require(ecrecover(message, v, r, s) == deployer, " Message was not verified!");
+
+
+        // msg.sender.transfer(amount);
+        return "Array has been verified!";
+
+    }
+
+
+        // Builds a prefixed hash to mimic the behavior of eth_sign.
+        function prefixed(string str1, string str2) internal pure returns (bytes32) {
+            return keccak256(abi.encodePacked('\x19TRON Signed Message:\n32', str1, str2));
+        }
+
+        function prefixedArr(uint[] arr) internal pure returns (bytes32) {
+            return keccak256(abi.encodePacked('\x19TRON Signed Message:\n32', arr));
+        }
+
+    // Destroy contract and reclaim leftover funds.
+    function kill() public {
+        require(msg.sender == deployer);
+        selfdestruct(msg.sender);
+    }
+
+
+    // Signature methods
+
+    /* function splitSignature(bytes sig)
+        internal
+        pure
+        returns (uint8, bytes32, bytes32)
+    {
+        require(sig.length == 65, "Signnature length is invalid");
+
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+
+        assembly {
+            // first 32 bytes, after the length prefix
+            r := mload(add(sig, 32))
+            // second 32 bytes
+            s := mload(add(sig, 64))
+            // final byte (first byte of the next 32 bytes)
+            v := and(mload(add(sig, 65)), 255)
+        }
+
+        return (v, r, s);
+    } */
+
+    /* function recoverSigner(bytes32 message, bytes sig)
+        internal
+        pure
+        returns (address)
+    {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+
+        (v, r, s) = splitSignature(sig);
+
+        return ecrecover(message, v, r, s);
+    } */
+
 
 }
