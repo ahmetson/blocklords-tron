@@ -374,7 +374,7 @@ contract Blocklords is Ownable {
 
         delete market_items_data[itemId];
 
-        require(notExpired, "MARKET_ITEM_ALREADY_EXPIRED");
+        return("MARKET_ITEM_ALREADY_EXPIRED");
       }
       /* require(removeMarketItemIfExpired(itemId),                                               "MARKET_ITEM_DURATION_NOT_EXPIRED"); */
       require(market_items_data[itemId].City != 0,   "MARKET_ITEM_NOT_IN_BLOCKCHAIN");
