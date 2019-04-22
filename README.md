@@ -37,8 +37,7 @@ This is a SmartContract Deploying environment based on [CodeXpert Tron (TRX) DAp
 
 ------------------------
 
-## Testing
+##Testing:
 
 This section is under development
-
 ------------------------
