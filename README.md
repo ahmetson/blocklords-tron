@@ -24,7 +24,7 @@ $ tronbox migrate --reset --network shasta
 
 ## Structure of Project
 
-This is a SmartContract Deploying environment based on **[CodeXpert Tron (TRX) DApp Tutorial Template]**(https://github.com/ThisIsCodeXpert/CodeXpert-Tron-DApp-Template).
+This is a SmartContract Deploying environment based on [CodeXpert Tron (TRX) DApp Tutorial Template](https://github.com/ThisIsCodeXpert/CodeXpert-Tron-DApp-Template).
 
 `tronbox.js` contains settings to deploy the SmartContract on Tron Blockchain. Checkout the documentation of TronBox to see different available options.
 
