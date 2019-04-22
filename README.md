@@ -5,7 +5,7 @@
 ## Instructions :
 
 1. Install TronLink chrome extension in browser.
-2. Install TronBox for Node.js. It needs to compile and deploy SmartContract.
+2. Install TronBox for Node.js. It needs to compile and deploy SmartContract:
 ```
 $ npm install -g tronbox
 ```
@@ -14,7 +14,7 @@ $ npm install -g tronbox
 $ npm install -g tronweb
 ```
 4. Add Private key to tronbox.js from shasta test network account of TronLink.
-5. Compile and Deploy the SmartContract
+5. Compile and Deploy the SmartContract as below:
 ```
 $ tronbox compile --compile-all
 $ tronbox migrate --reset --network shasta
