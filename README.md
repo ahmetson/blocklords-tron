@@ -26,13 +26,13 @@ $ tronbox migrate --reset --network shasta
 
 This is a SmartContract Deploying environment based on [CodeXpert Tron (TRX) DApp Tutorial Template](https://github.com/ThisIsCodeXpert/CodeXpert-Tron-DApp-Template).
 
-`tronbox.js` contains settings to deploy the SmartContract on Tron Blockchain. Checkout the documentation of TronBox to see different available options.
+`tronbox.js` script – settings to deploy the SmartContract on Tron Blockchain. Checkout the [documentation of TronBox](https://developers.tron.network/docs/tron-box-user-guide#section-basic-commands) to see different available options.
 
-`contracts` directory contains source codes of SmartContracts in Solidity Programming Langauge.
+`contracts` directory – source codes of SmartContracts in Solidity Programming Langauge.
 
-`test` directory contains scripts to check the SmartContract functions (Need to develop this section, it should be empty for now).
+`test` directory – scripts to check the SmartContract functions *(Need to develop this section, it should be empty for now).*
 
-`build\contracts` directory contains SmartContract files compilated by TronBox.
+`build\contracts` directory – Smartcontract Files from output of TronBox compilation.
 
 
 ------------------------
